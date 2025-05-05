@@ -1,18 +1,11 @@
-function progressPromise( promises, tickCallback ) {
-    var len = promises.length
-    var progress = 0
-    
-    function tick(promise) {
-      promise.then(function () {
-        progress++
-        tickCallback(progress, len)
-      }).catch(reason => {
-        console.log(reason)
-      });
-      return promise
+export default function progressPromise(promises, progressCallback) {
+    let d = 0
+    progressCallback(0, promises.length)
+    for (const p of promises) {
+        p.then(() => {
+            d++
+            progressCallback(d, promises.length)
+        })
     }
-    
-    return Promise.all(promises.map(tick))
+    return Promise.all(promises)
 }
-
-export default progressPromise

@@ -1,4 +1,8 @@
-varying vec2 vUv;
+#version 300 es
+precision highp float;
+
+in vec2 vUv;
+out vec4 fragColor;
 
 uniform float time;
 uniform vec3 fogColor;
@@ -7,11 +11,10 @@ uniform float fogFar;
 uniform sampler2D texture;
 
 void main() {
-
 	vec2 uv = vUv;
 	// vec4 color = texture2D( texture, vUv );
 
-	vec4 origColor = texture2D(texture, vUv);
+	vec4 origColor = texture(texture, vUv);
 
 	// remove green
 	if ( origColor.r < 0.4 && origColor.b < 0.4 && origColor.g > 0.4 ) {
@@ -27,16 +30,12 @@ void main() {
 	// if ( gradientImage.b < 0.9 ) discard;
 
 	// gl_FragColor = origColor * opacity;
-	gl_FragColor = origColor;
+	fragColor = origColor;
 
 	#ifdef USE_FOG
-		#ifdef USE_LOGDEPTHBUF_EXT
-			float depth = gl_FragDepthEXT / gl_FragCoord.w;
-		#else
-			float depth = gl_FragCoord.z / gl_FragCoord.w;
-		#endif
+		float depth = gl_FragCoord.z / gl_FragCoord.w;
 		float fogFactor = smoothstep( fogNear, fogFar, depth );
-		gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+		fragColor.rgb = mix( fragColor.rgb, fogColor, fogFactor );
 	#endif
 
 }

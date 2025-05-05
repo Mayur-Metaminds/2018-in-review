@@ -1,5 +1,64 @@
 const months = {
-
+    january: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'January'
+    },
+    february: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'February'
+    },
+    march: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'March'
+    },
+    april: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'April'
+    },
+    may: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'May'
+    },
+    june: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'June'
+    },
+    july: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'July'
+    },
+    august: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'August'
+    },
+    september: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'September'
+    },
+    october: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'October'
+    },
+    november: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'November'
+    },
+    december: {
+        textColor: '#1b42d8',
+        bgColor: '#AEC7C3',
+        name: 'December'
+    },
     intro: {
         textColor: 0x1b42d8,
         outlineTextColor: 0x1b42d8,
@@ -32,12 +91,6 @@ const months = {
         bgColor: 0x5198A8,
         tintColor: 0x3c7484,
         offset: 35
-    },
-    may: {
-        name: 'MAY',
-        textColor: 0xFB9364,
-        bgColor: 0x2C57A2,
-        tintColor: 0x36579d
     },
     jun: {
         name: 'JUNE',
@@ -89,7 +142,6 @@ const months = {
         bgColor: 0x416863,
         tintColor: 0xB9B4E8
     },
-
 }
 
 export default months

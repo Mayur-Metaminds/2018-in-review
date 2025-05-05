@@ -3,17 +3,25 @@ const path = require('path')
 const HtmlWebpackPlugin = require('html-webpack-plugin')
 const BrowserSyncPlugin = require('browser-sync-webpack-plugin')
 const MiniCssExtractPlugin = require("mini-css-extract-plugin")
-const OptimizeCSSAssetsPlugin = require("optimize-css-assets-webpack-plugin")
-const MinifyPlugin = require("babel-minify-webpack-plugin")
+const CssMinimizerPlugin = require("css-minimizer-webpack-plugin")
+const TerserPlugin = require("terser-webpack-plugin")
 const OptimizeThreePlugin = require('@vxna/optimize-three-webpack-plugin')
-const CleanWebpackPlugin = require('clean-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin')
 const devMode = process.env.NODE_ENV !== 'production'
 
 module.exports = {
     entry: [ './src/js/main.js' ],
     output: {
         path: path.resolve(__dirname, 'public'),
-        filename: 'js/[name].[hash].js'
+        filename: 'js/[name].[contenthash].js',
+        clean: true,
+        publicPath: '/'
+    },
+    resolve: {
+        alias: {
+            'three': path.resolve(__dirname, 'node_modules/three'),
+            'three/addons': path.resolve(__dirname, 'node_modules/three/examples/jsm')
+        }
     },
     module: {
         rules: [
@@ -26,7 +34,7 @@ module.exports = {
             },
             {
                 test: /\.(glsl|frag|vert)$/,
-                loader: 'raw-loader',
+                type: 'asset/source',
                 exclude: /node_modules/
             },
             {
@@ -38,21 +46,57 @@ module.exports = {
                 test: /\.(sa|sc|c)ss$/,
                 use: [
                   devMode ? 'style-loader' : MiniCssExtractPlugin.loader,
-                  'css-loader',
-                  'sass-loader',
+                  {
+                    loader: 'css-loader',
+                    options: {
+                        sourceMap: true
+                    }
+                  },
+                  {
+                    loader: 'sass-loader',
+                    options: {
+                        sourceMap: true,
+                        sassOptions: {
+                            includePaths: [path.resolve(__dirname, 'public/fonts')]
+                        }
+                    }
+                  }
                 ],
             },
-            { test: /\.(png|woff|woff2|eot|ttf|svg)$/, use: ['url-loader?limit=100000'] }
+            {
+                test: /\.(png|woff|woff2|eot|ttf|svg|ico|webmanifest)$/,
+                type: 'asset/resource',
+                generator: {
+                    filename: 'fonts/[name][ext]'
+                }
+            }
         ]
     },
     plugins: [
-        new CleanWebpackPlugin(['public/js', 'public/css']),
         new HtmlWebpackPlugin({
             template: 'src/index.html',
-            inject: false
+            favicon: 'public/favicon/favicon.ico'
         }),
-        new webpack.HotModuleReplacementPlugin(), // Enable HMR
-        new webpack.HashedModuleIdsPlugin(),
+        new webpack.HotModuleReplacementPlugin(),
+        new webpack.ids.HashedModuleIdsPlugin(),
+        new CopyWebpackPlugin({
+            patterns: [
+                {
+                    from: 'public/favicon',
+                    to: 'favicon'
+                },
+                {
+                    from: 'public/site.webmanifest',
+                    to: 'site.webmanifest'
+                },
+                {
+                    from: 'public/fonts',
+                    to: 'fonts'
+                },
+                { from: 'public/fonts', to: 'fonts' },
+                { from: 'public', to: '' }
+            ]
+        }),
         new BrowserSyncPlugin(
             {
                 host: 'localhost',
@@ -71,6 +115,16 @@ module.exports = {
                             }
                         }
                     }
+                ],
+                middleware: [
+                    function(req, res, next) {
+                        if (req.url.endsWith('.css')) {
+                            res.setHeader('Content-Type', 'text/css');
+                        } else if (req.url.endsWith('.js')) {
+                            res.setHeader('Content-Type', 'application/javascript');
+                        }
+                        next();
+                    }
                 ]
             },
             {
@@ -78,19 +132,33 @@ module.exports = {
             }
         ),
         new MiniCssExtractPlugin({
-            filename: 'css/[name].[hash].css',
+            filename: 'css/[name].[contenthash].css',
         }),
         new OptimizeThreePlugin()
     ],
     devServer: {
-        hot: true, // Tell the dev-server we're using HMR
-        contentBase: path.resolve(__dirname, 'public'),
+        hot: true,
+        static: {
+            directory: path.resolve(__dirname, 'public'),
+            publicPath: '/',
+            serveIndex: true,
+            watch: true
+        },
+        devMiddleware: {
+            publicPath: '/',
+            writeToDisk: true
+        },
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+            'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization'
+        }
     },
-    devtool: devMode ? 'cheap-eval-source-map' : false,
+    devtool: devMode ? 'eval-source-map' : false,
     optimization: {
         minimizer: [
-            new MinifyPlugin(),
-            new OptimizeCSSAssetsPlugin()
+            new TerserPlugin(),
+            new CssMinimizerPlugin()
         ],
         runtimeChunk: 'single',
         splitChunks: {

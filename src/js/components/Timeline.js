@@ -1,11 +1,11 @@
 import * as THREE from 'three'
-import { TweenMax } from 'gsap'
+import { gsap } from 'gsap'
 import TinyGesture from 'tinygesture'
 import AssetLoader from '../utils/AssetLoader'
 import Item from './Item'
 import Section from './Section'
 import Konami from 'konami'
-
+import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
 import months from '../config/months'
 import assetOrder from '../config/assetOrder'
 import assetData from '../config/assetData'
@@ -39,7 +39,7 @@ export default class Timeline {
         }
 
         this.c = {
-            dpr: window.devicePixelRatio >= 2 ? 2 : 1,
+            dpr: Math.min(window.devicePixelRatio, 2),
             startTime: Date.now(),
             size: {
                 w: window.innerWidth,
@@ -51,7 +51,7 @@ export default class Timeline {
             autoMoveSpeed: 0,
             isMobile: this.isMobile(),
             holdingMouseDown: false,
-            touchEnabled: ('ontouchstart' in window),
+            touchEnabled: 'ontouchstart' in window,
         }
 
         this.c.globalScale = Math.min( 1, this.c.size.w / 1400 )
@@ -59,9 +59,11 @@ export default class Timeline {
         if( this.c.touchEnabled ) document.documentElement.classList.add('touch-enabled')
         else document.documentElement.classList.add('enable-cursor')
 
-        this.assetList = assetOrder
-        this.assetList.intro = ['ok.png']
-        this.assetList.end = ['wave.mp4']
+        this.assetList = {
+            ...assetOrder,
+            intro: ['ok.png'],
+            end: ['wave.mp4']
+        }
         this.assetData = assetData
 
         this.timelineEntered = false
@@ -85,45 +87,37 @@ export default class Timeline {
     }
 
     isMobile() {
-        let a = navigator.userAgent||navigator.vendor||window.opera
-        return /(android|bb\d+|meego).+mobile|avantgo|bada\/|blackberry|blazer|compal|elaine|fennec|hiptop|iemobile|ip(hone|od)|iris|kindle|lge |maemo|midp|mmp|mobile.+firefox|netfront|opera m(ob|in)i|palm( os)?|phone|p(ixi|re)\/|plucker|pocket|psp|series(4|6)0|symbian|treo|up\.(browser|link)|vodafone|wap|windows ce|xda|xiino|android|ipad|playbook|silk/i.test(a)||/1207|6310|6590|3gso|4thp|50[1-6]i|770s|802s|a wa|abac|ac(er|oo|s\-)|ai(ko|rn)|al(av|ca|co)|amoi|an(ex|ny|yw)|aptu|ar(ch|go)|as(te|us)|attw|au(di|\-m|r |s )|avan|be(ck|ll|nq)|bi(lb|rd)|bl(ac|az)|br(e|v)w|bumb|bw\-(n|u)|c55\/|capi|ccwa|cdm\-|cell|chtm|cldc|cmd\-|co(mp|nd)|craw|da(it|ll|ng)|dbte|dc\-s|devi|dica|dmob|do(c|p)o|ds(12|\-d)|el(49|ai)|em(l2|ul)|er(ic|k0)|esl8|ez([4-7]0|os|wa|ze)|fetc|fly(\-|_)|g1 u|g560|gene|gf\-5|g\-mo|go(\.w|od)|gr(ad|un)|haie|hcit|hd\-(m|p|t)|hei\-|hi(pt|ta)|hp( i|ip)|hs\-c|ht(c(\-| |_|a|g|p|s|t)|tp)|hu(aw|tc)|i\-(20|go|ma)|i230|iac( |\-|\/)|ibro|idea|ig01|ikom|im1k|inno|ipaq|iris|ja(t|v)a|jbro|jemu|jigs|kddi|keji|kgt( |\/)|klon|kpt |kwc\-|kyo(c|k)|le(no|xi)|lg( g|\/(k|l|u)|50|54|\-[a-w])|libw|lynx|m1\-w|m3ga|m50\/|ma(te|ui|xo)|mc(01|21|ca)|m\-cr|me(rc|ri)|mi(o8|oa|ts)|mmef|mo(01|02|bi|de|do|t(\-| |o|v)|zz)|mt(50|p1|v )|mwbp|mywa|n10[0-2]|n20[2-3]|n30(0|2)|n50(0|2|5)|n7(0(0|1)|10)|ne((c|m)\-|on|tf|wf|wg|wt)|nok(6|i)|nzph|o2im|op(ti|wv)|oran|owg1|p800|pan(a|d|t)|pdxg|pg(13|\-([1-8]|c))|phil|pire|pl(ay|uc)|pn\-2|po(ck|rt|se)|prox|psio|pt\-g|qa\-a|qc(07|12|21|32|60|\-[2-7]|i\-)|qtek|r380|r600|raks|rim9|ro(ve|zo)|s55\/|sa(ge|ma|mm|ms|ny|va)|sc(01|h\-|oo|p\-)|sdk\/|se(c(\-|0|1)|47|mc|nd|ri)|sgh\-|shar|sie(\-|m)|sk\-0|sl(45|id)|sm(al|ar|b3|it|t5)|so(ft|ny)|sp(01|h\-|v\-|v )|sy(01|mb)|t2(18|50)|t6(00|10|18)|ta(gt|lk)|tcl\-|tdg\-|tel(i|m)|tim\-|t\-mo|to(pl|sh)|ts(70|m\-|m3|m5)|tx\-9|up(\.b|g1|si)|utst|v400|v750|veri|vi(rg|te)|vk(40|5[0-3]|\-v)|vm40|voda|vulc|vx(52|53|60|61|70|80|81|83|85|98)|w3c(\-| )|webc|whit|wi(g |nc|nw)|wmlb|wonu|x700|yas\-|your|zeto|zte\-/i.test(a.substr(0,4))
+        const userAgent = navigator.userAgent || navigator.vendor || window.opera
+        return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase())
     }
 
-    loadAssets() {
+    async loadAssets() {
 
-        let assetLoader = new AssetLoader( this.c.isMobile )
+        const assetLoader = new AssetLoader( this.c.isMobile )
         
         if( this.enableLoader ) {
-            setTimeout( () => {
-                assetLoader.load( this.assetList, this.renderer ).then( assets => {
+            await new Promise( resolve => setTimeout( resolve, 2000 ) )
+        }
 
-                    this.assets = assets
-                    console.log('ASSETS LOADED');
+        try {
+            this.assets = await assetLoader.load( this.assetList, this.renderer )
+            console.log('ASSETS LOADED')
 
-                    // all assets loaded - initialise
-                    this.createTimeline()
-
-                })
-            }, 2000 )
-        } else {
-
-            assetLoader.load( this.assetList, this.renderer ).then( assets => {
-
-                this.assets = assets
-                console.log('ASSETS LOADED');
-
-                // all assets loaded - initialise
-                this.createTimeline()
-
-            })
-
+            // all assets loaded - initialise
+            this.createTimeline()
+        } catch (error) {
+            console.error('Error loading assets:', error)
         }
 
     }
 
     init() {
 
-        this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true })
+        this.renderer = new THREE.WebGLRenderer({ 
+            antialias: true, 
+            alpha: true,
+            powerPreference: 'high-performance'
+        })
         this.renderer.setPixelRatio( this.c.dpr )
         this.renderer.setSize( this.c.size.w, this.c.size.h )
         document.body.appendChild( this.renderer.domElement )
@@ -151,11 +145,13 @@ export default class Timeline {
         this.mouse = new THREE.Vector2()
         this.mousePerspective = new THREE.Vector2()
 
-        window.addEventListener( 'devicemotion', event => {
-            if( event.rotationRate.alpha || event.rotationRate.beta || event.rotationRate.gamma ) {
-                this.gyroEnabled = true
-            }
-        })
+        if( 'DeviceMotionEvent' in window ) {
+            window.addEventListener( 'devicemotion', event => {
+                if( event.rotationRate?.alpha || event.rotationRate?.beta || event.rotationRate?.gamma ) {
+                    this.gyroEnabled = true
+                }
+            })
+        }
 
     }
 
@@ -237,7 +233,7 @@ export default class Timeline {
 
         this.linkGroup = new THREE.Group()
 
-        let linkGeom = new THREE.TextGeometry( 'SEE MORE', {
+        let linkGeom = new TextGeometry( 'SEE MORE', {
             font: this.assets.fonts['SuisseIntl-Bold'],
             size: 6,
             height: 0,
@@ -247,14 +243,14 @@ export default class Timeline {
         this.link = new THREE.Mesh( linkGeom, this.captionTextMat )
 
         this.linkUnderline = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry( 45, 1 ),
+            new THREE.PlaneGeometry( 45, 1 ),
             this.linkUnderlineMat
         )
         this.linkUnderline.position.set( 0, -10, 0 )
 
         // for raycasting so it doesn't just pick up on letters
         this.linkBox = new THREE.Mesh(
-            new THREE.PlaneBufferGeometry( 70, 20 ),
+            new THREE.PlaneGeometry( 70, 20 ),
             new THREE.MeshBasicMaterial( { alphaTest: 0, visible: false } )
         )
         this.linkGroup.visible = false
@@ -274,13 +270,15 @@ export default class Timeline {
 
     moveToStart() {
 
-        TweenMax.to( this.camera.position, 2, {
+        gsap.to( this.camera.position, {
             y: 0,
+            duration: 2,
             ease: 'Expo.easeInOut'
         })
 
-        TweenMax.to( '.loading', 2, {
+        gsap.to( '.loading', {
             y: '-100%',
+            duration: 2,
             ease: 'Expo.easeInOut',
             onComplete: () => {
                 document.querySelector('.loading').style.display = 'none'
@@ -288,22 +286,25 @@ export default class Timeline {
             }
         })
 
-        TweenMax.to( [ '.say-hello', '.logo', '.social' ], 2, {
+        gsap.to( [ '.say-hello', '.logo', '.social' ], {
             y: 0,
             delay: 1,
+            duration: 2,
             ease: 'Expo.easeInOut'
         })
 
-        TweenMax.to( [ '.left', '.right', ], 2, {
+        gsap.to( [ '.left', '.right', ], {
             x: 0,
             delay: 1,
+            duration: 2,
             ease: 'Expo.easeInOut'
         })
 
         if( this.gyroEnabled ) {
-            TweenMax.to( this.dom.compass, 2, {
+            gsap.to( this.dom.compass, {
                 y: 0,
                 delay: 1,
+                duration: 2,
                 ease: 'Expo.easeInOut'
             })
         }
@@ -331,9 +332,10 @@ export default class Timeline {
             posOffset = this.sections[ this.remainingMonths[ this.remainingMonths.length - 2 ] ].position.z
         }
 
-        TweenMax.to( item.position, 1.5, {
+        gsap.to( item.position, {
             x: 0,
             y: 0,
+            duration: 1.5,
             ease: 'Expo.easeInOut',
             onComplete: () => {
                 this.itemAnimating = false
@@ -341,36 +343,39 @@ export default class Timeline {
             }
         })
 
-        TweenMax.to( item.uniforms.progress, 1.5, {
+        gsap.to( item.uniforms.progress, {
             value: 1,
+            duration: 1.5,
             ease: 'Expo.easeInOut'
         })
 
-        TweenMax.to( this.timeline.position, 1.5, {
+        gsap.to( this.timeline.position, {
             z: -(posOffset - -item.position.z) + ( this.c.globalScale < 0.5 ? 450 : 300 ) ,
+            duration: 1.5,
             ease: 'Expo.easeInOut'
         })
 
-        TweenMax.to( this.textMat, 1, {
+        gsap.to( this.textMat, {
             opacity: 0, 
+            duration: 1,
             ease: 'Expo.easeInOut',
             onComplete: () => {
                 this.textMat.visible = false
             }
         })
 
-        TweenMax.to( this.captionTextMat, 2, {
+        gsap.to( this.captionTextMat, {
             opacity: 1,
-            ease: 'Expo.easeInOut',
+            duration: 2,
             delay: 0.3,
             onStart: () => {
                 this.captionTextMat.visible = true
             }
         })
 
-        TweenMax.to( this.linkUnderlineMat, 2, {
+        gsap.to( this.linkUnderlineMat, {
             opacity: 0.4,
-            ease: 'Expo.easeInOut',
+            duration: 2,
             delay: 0.3,
             onStart: () => {
                 this.linkUnderlineMat.visible = true
@@ -379,11 +384,12 @@ export default class Timeline {
 
         if( item.caption ) {
 
-            TweenMax.fromTo( item.caption.position, 2, {
+            gsap.fromTo( item.caption.position, {
                 z: -100
             }, {
                 z: 0,
                 delay: 0.2,
+                duration: 2,
                 ease: 'Expo.easeInOut',
                 onStart: () => {
                     item.caption.visible = true
@@ -400,11 +406,12 @@ export default class Timeline {
     
             this.linkGroup.position.y = item.caption ? item.caption.position.y - 40  : -item.mesh.scale.y / 2 - 50
 
-            TweenMax.fromTo( this.linkGroup.position, 2, {
+            gsap.fromTo( this.linkGroup.position, {
                 z: 0
             }, {
                 z: this.c.globalScale < 0.5 ? 450 : 300,
                 delay: 0.3,
+                duration: 2,
                 ease: 'Expo.easeInOut',
                 onStart: () => {
                     this.linkGroup.visible = true
@@ -424,14 +431,16 @@ export default class Timeline {
 
             if( this.items[x] === item ) continue
 
-            TweenMax.to( this.items[x].material.uniforms.opacity, 1.3, {
+            gsap.to( this.items[x].material.uniforms.opacity, {
                 value: 0,
+                duration: 1.3,
                 ease: 'Expo.easeInOut'
             })
 
-            TweenMax.to( this.items[x].position, 1.3, {
+            gsap.to( this.items[x].position, {
                 x: pos.x,
                 y: pos.y,
+                duration: 1.3,
                 ease: 'Expo.easeInOut'
             })
 
@@ -455,14 +464,16 @@ export default class Timeline {
                 }
             }
 
-            TweenMax.to( this.itemOpen.position, 1.5, {
+            gsap.to( this.itemOpen.position, {
                 x: this.itemOpen.origPos.x,
                 y: this.itemOpen.origPos.y,
+                duration: 1.5,
                 ease: 'Expo.easeInOut'
             })
 
-            TweenMax.to( this.timeline.position, 1.5, {
+            gsap.to( this.timeline.position, {
                 z: this.origTimelinePos,
+                duration: 1.5,
                 ease: 'Expo.easeInOut',
                 onComplete: () => {
                     this.c.allowScrolling = true
@@ -471,21 +482,23 @@ export default class Timeline {
                 }
             })
 
-            TweenMax.to( this.itemOpen.uniforms.progress, 1.5, {
+            gsap.to( this.itemOpen.uniforms.progress, {
                 value: 0,
+                duration: 1.5,
                 ease: 'Expo.easeInOut'
             })
 
-            TweenMax.to( this.textMat, 1.5, {
+            gsap.to( this.textMat, {
                 opacity: 1,
-                ease: 'Expo.easeInOut',
+                duration: 1.5,
                 onStart: () => {
                     this.textMat.visible = true
                 }
             })
 
-            TweenMax.to( [ this.captionTextMat, this.linkUnderlineMat ], 0.4, {
+            gsap.to( [ this.captionTextMat, this.linkUnderlineMat ], {
                 opacity: 0, 
+                duration: 0.4,
                 ease: 'Expo.easeInOut',
                 onComplete: () => {
                     this.captionTextMat.visible = false
@@ -499,14 +512,16 @@ export default class Timeline {
 
                 if( this.items[x].active ) continue
 
-                TweenMax.to( this.items[x].material.uniforms.opacity, 1.5, {
+                gsap.to( this.items[x].material.uniforms.opacity, {
                     value: 1,
+                    duration: 1.5,
                     ease: 'Expo.easeInOut'
                 })
 
-                TweenMax.to( this.items[x].position, 1.5, {
+                gsap.to( this.items[x].position, {
                     x: this.items[x].origPos.x,
                     y: this.items[x].origPos.y,
+                    duration: 1.5,
                     ease: 'Expo.easeInOut',
                 })
 
@@ -530,8 +545,9 @@ export default class Timeline {
         this.linkUnderlineMat.visible = true
         this.linkUnderlineMat.opacity = 0.3
 
-        TweenMax.to( this.camera.position, 2, {
+        gsap.to( this.camera.position, {
             y: this.contactSection.position.y * this.scene.scale.y,
+            duration: 2,
             ease: 'Expo.easeInOut',
             onComplete: () => {
                 this.timeline.visible = false
@@ -545,8 +561,9 @@ export default class Timeline {
         this.timeline.visible = true
         this.contactSection.isOpen = false
 
-        TweenMax.to( this.camera.position, 2, {
+        gsap.to( this.camera.position, {
             y: 0,
+            duration: 2,
             ease: 'Expo.easeInOut',
             onComplete: () => {
                 this.contactSection.visible = false
@@ -615,8 +632,9 @@ export default class Timeline {
                 
                 this.c.scrolling = true
 
-                TweenMax.to( this.c, 4, {
+                gsap.to( this.c, {
                     scrollPos: 0,
+                    duration: 4,
                     ease: 'Expo.easeInOut',
                     onUpdate: () => {
                         this.c.scrolling = true
@@ -627,10 +645,10 @@ export default class Timeline {
 
                 this.dom.cursor.dataset.cursor = 'move'
 
-                TweenMax.to( this.c, 0.5, {
+                gsap.to( this.c, {
                     delay: 0.7,
                     autoMoveSpeed: 20
-                } )
+                })
 
             }
 
@@ -642,7 +660,7 @@ export default class Timeline {
 
         if( !this.itemOpen ) this.dom.cursor.dataset.cursor = 'pointer'
         this.c.holdingMouseDown = false
-        TweenMax.killTweensOf( this.c, { autoMoveSpeed: true } )
+        gsap.killTweensOf( this.c, { autoMoveSpeed: true } )
         this.c.autoMoveSpeed = 0
 
     }
@@ -654,9 +672,10 @@ export default class Timeline {
         this.updatingPerspective = true 
 
         if( !this.c.touchEnabled ) {
-            TweenMax.to( '.cursor', 1.5, {
+            gsap.to( '.cursor', {
                 x: e.clientX,
                 y: e.clientY,
+                duration: 1.5,
                 ease: 'Power4.easeOut'
             })
         }
@@ -731,16 +750,18 @@ export default class Timeline {
 
     updatePerspective() {
 
-        TweenMax.to( this.camera.rotation, 4, {
+        gsap.to( this.camera.rotation, {
             x: -this.mousePerspective.y * 0.5,
             y: -this.mousePerspective.x * 0.5,
+            duration: 4,
             ease: 'Power4.easeOut',
         })
 
         if( this.activeMonth === 'end' ) {
-            TweenMax.to( this.sections[ 'end' ].arrow.rotation, 4, {
+            gsap.to( this.sections[ 'end' ].arrow.rotation, {
                 x: -1.5 + this.mousePerspective.y * 0.2,
                 y: this.mousePerspective.x * 0.8,
+                duration: 4,
                 ease: 'Power4.easeOut',
             })
         }
@@ -758,9 +779,10 @@ export default class Timeline {
             this.initialOrientation = { gamma: this.orientation.gamma, beta: this.orientation.beta }
         }
 
-        TweenMax.to( this.camera.rotation, 2, {
+        gsap.to( this.camera.rotation, {
             x: this.orientation.beta ? (this.orientation.beta - this.initialOrientation.beta) * (Math.PI / 300) : 0,
             y: this.orientation.gamma ? (this.orientation.gamma - this.initialOrientation.gamma) * (Math.PI / 300) : 0,
+            duration: 2,
             ease: 'Power4.easeOut',
         })
 
@@ -791,21 +813,23 @@ export default class Timeline {
             let tintColor = new THREE.Color( this.months[ this.activeMonth ].tintColor )
             let interfaceColor
 
-            TweenMax.to( [ this.scene.fog.color, this.scene.background ], 1, {
+            gsap.to( [ this.scene.fog.color, this.scene.background ], {
                 r: bgColor.r,
                 g: bgColor.g,
                 b: bgColor.b,
+                duration: 1,
                 ease: 'Power4.easeOut'
             })
 
-            TweenMax.to( this.textMat.color, 1, {
+            gsap.to( this.textMat.color, {
                 r: textColor.r,
                 g: textColor.g,
                 b: textColor.b,
+                duration: 1,
                 ease: 'Power4.easeOut'
             })
 
-            TweenMax.set( [ this.captionTextMat.color, this.linkUnderlineMat.color ], {
+            gsap.set( [ this.captionTextMat.color, this.linkUnderlineMat.color ], {
                 r: textColor.r,
                 g: textColor.g,
                 b: textColor.b
@@ -813,10 +837,11 @@ export default class Timeline {
 
             for( let id in this.items ) {
 
-                TweenMax.to( this.items[id].uniforms.gradientColor.value, 1, {
+                gsap.to( this.items[id].uniforms.gradientColor.value, {
                     r: tintColor.r,
                     g: tintColor.g,
                     b: tintColor.b,
+                    duration: 1,
                     ease: 'Power4.easeOut'
                 })
 
@@ -827,10 +852,11 @@ export default class Timeline {
                 let outlineTextColor = new THREE.Color( this.months[ this.activeMonth ].outlineTextColor )
                 interfaceColor = outlineTextColor.getHexString()
 
-                TweenMax.to( [ this.textOutlineMat.color ], 1, {
+                gsap.to( [ this.textOutlineMat.color ], {
                     r: outlineTextColor.r,
                     g: outlineTextColor.g,
                     b: outlineTextColor.b,
+                    duration: 1,
                     ease: 'Power4.easeOut'
                 })
                 
@@ -845,18 +871,19 @@ export default class Timeline {
             else
                 this.contactTextMat.color.set( 0xFFFFFF )
 
-            TweenMax.to( this.dom.mainSvgs, 1, { fill: `#${interfaceColor}`, ease: 'Power4.easeOut' } )
-            TweenMax.to( [ this.dom.cursorSvgs, this.dom.compassSvg ], 1, { stroke: `#${interfaceColor}`, ease: 'Power4.easeOut' } )
-            TweenMax.to( '.say-hello .underline', 1, { borderBottomColor: `#${interfaceColor}`, ease: 'Power4.easeOut' } )
+            gsap.to( this.dom.mainSvgs, { fill: `#${interfaceColor}`, duration: 1, ease: 'Power4.easeOut' } )
+            gsap.to( [ this.dom.cursorSvgs, this.dom.compassSvg ], { stroke: `#${interfaceColor}`, duration: 1, ease: 'Power4.easeOut' } )
+            gsap.to( '.say-hello .underline', { borderBottomColor: `#${interfaceColor}`, duration: 1, ease: 'Power4.easeOut' } )
 
             document.querySelector("meta[name=theme-color]").setAttribute("content", '#' + bgColor.getHexString() )
 
             if( this.activeMonth === 'end' && !this.sections['end'].arrowTween ) {
 
-                this.sections['end'].arrowTween = TweenMax.to( this.sections['end'].arrow.position, 1, {
+                this.sections['end'].arrowTween = gsap.to( this.sections['end'].arrow.position, {
                     z: 0,
                     repeat: -1,
                     yoyo: true,
+                    duration: 1,
                     ease: 'Power2.easeInOut'
                 })
 
@@ -917,7 +944,7 @@ export default class Timeline {
             if( !this.easterEggEnabled ) this.changeColours()
 
             if( this.timeline.position.z < 700 ) {
-                TweenMax.set( this.sections['intro'].circle.rotation, {
+                gsap.set( this.sections['intro'].circle.rotation, {
                     z: '+=' + delta * 0.005
                 })
             }
@@ -1043,8 +1070,9 @@ export default class Timeline {
 
         this.easterEggEnabled = true
         
-        TweenMax.to( this.timeline.rotation, 2, {
+        gsap.to( this.timeline.rotation, {
             z: 360 * Math.PI / 180,
+            duration: 2,
             ease: 'Power4.easeInOut'
         })
 
@@ -1052,24 +1080,27 @@ export default class Timeline {
 
         for( let i = 0; i < this.itemMeshes.length - 1; i++ ) {
 
-            TweenMax.to( this.itemMeshes[i].rotation, 2, {
+            gsap.to( this.itemMeshes[i].rotation, {
                 z: 360 * Math.PI / 180,
+                duration: 2,
                 ease: 'Linear.easeNone',
                 repeat: -1
             })
 
         }
 
-        TweenMax.to( this.sections['intro'].children[2].rotation, 2, {
+        gsap.to( this.sections['intro'].children[2].rotation, {
             z: 360 * Math.PI / 180,
+            duration: 2,
             ease: 'Linear.easeNone',
             repeat: -1
         })
 
         for( let id in this.sections ) {
 
-            TweenMax.to( this.sections[id].children[0].position, 1, {
+            gsap.to( this.sections[id].children[0].position, {
                 z: 150,
+                duration: 1,
                 repeat: -1,
                 yoyo: true,
                 ease: 'Linear.easeNone'
@@ -1088,31 +1119,35 @@ export default class Timeline {
 
         for( let id in this.items ) {
 
-            TweenMax.to( this.items[id].uniforms.gradientColor.value, 1, {
+            gsap.to( this.items[id].uniforms.gradientColor.value, {
                 r: 0.9882352941,
                 g: 0.2941176471,
                 b: 0.05882352941,
+                duration: 1,
                 ease: 'Power4.easeOut',
                 onComplete: () => {
 
-                    TweenMax.to( this.items[id].uniforms.gradientColor.value, 1, {
+                    gsap.to( this.items[id].uniforms.gradientColor.value, {
                         r: 0.9882352941,
                         g: 0.05882352941,
                         b: 0.7529411765,
+                        duration: 1,
                         ease: 'Power4.easeOut',
                         onComplete: () => {
             
-                            TweenMax.to( this.items[id].uniforms.gradientColor.value, 1, {
+                            gsap.to( this.items[id].uniforms.gradientColor.value, {
                                 r: 0.05882352941,
                                 g: 0.7529411765,
                                 b: 0.9882352941,
+                                duration: 1,
                                 ease: 'Power4.easeOut',
                                 onComplete: () => {
                                     
-                                    TweenMax.to( this.items[id].uniforms.gradientColor.value, 1, {
+                                    gsap.to( this.items[id].uniforms.gradientColor.value, {
                                         r: 0.05882352941,
                                         g: 0.9882352941,
                                         b: 0.2941176471,
+                                        duration: 1,
                                         ease: 'Power4.easeOut'
                                     })
     
@@ -1127,31 +1162,35 @@ export default class Timeline {
 
         }
 
-        TweenMax.to( this.textMat.color, 1, {
+        gsap.to( this.textMat.color, {
             r: 0.9882352941,
             g: 0.2941176471,
             b: 0.05882352941,
+            duration: 1,
             ease: 'Power4.easeOut',
             onComplete: () => {
 
-                TweenMax.to( this.textMat.color, 1, {
+                gsap.to( this.textMat.color, {
                     r: 0.9882352941,
                     g: 0.05882352941,
                     b: 0.7529411765,
+                    duration: 1,
                     ease: 'Power4.easeOut',
                     onComplete: () => {
         
-                        TweenMax.to( this.textMat.color, 1, {
+                        gsap.to( this.textMat.color, {
                             r: 0.05882352941,
                             g: 0.7529411765,
                             b: 0.9882352941,
+                            duration: 1,
                             ease: 'Power4.easeOut',
                             onComplete: () => {
                                 
-                                TweenMax.to( this.textMat.color, 1, {
+                                gsap.to( this.textMat.color, {
                                     r: 0.05882352941,
                                     g: 0.9882352941,
                                     b: 0.2941176471,
+                                    duration: 1,
                                     ease: 'Power4.easeOut',
                                 })
 
@@ -1164,31 +1203,35 @@ export default class Timeline {
             }
         })
 
-        TweenMax.to( [ this.scene.fog.color, this.scene.background ], 1, {
+        gsap.to( [ this.scene.fog.color, this.scene.background ], {
             r: 0.05882352941,
             g: 0.9882352941,
             b: 0.2941176471,
+            duration: 1,
             ease: 'Power4.easeOut',
             onComplete: () => {
 
-                TweenMax.to( [ this.scene.fog.color, this.scene.background ], 1, {
+                gsap.to( [ this.scene.fog.color, this.scene.background ], {
                     r: 0.05882352941,
                     g: 0.7529411765,
                     b: 0.9882352941,
+                    duration: 1,
                     ease: 'Power4.easeOut',
                     onComplete: () => {
         
-                        TweenMax.to( [ this.scene.fog.color, this.scene.background ], 1, {
+                        gsap.to( [ this.scene.fog.color, this.scene.background ], {
                             r: 0.9882352941,
                             g: 0.05882352941,
                             b: 0.7529411765,
+                            duration: 1,
                             ease: 'Power4.easeOut',
                             onComplete: () => {
                                 
-                                TweenMax.to( [ this.scene.fog.color, this.scene.background ], 1, {
+                                gsap.to( [ this.scene.fog.color, this.scene.background ], {
                                     r: 0.9882352941,
                                     g: 0.2941176471,
                                     b: 0.05882352941,
+                                    duration: 1,
                                     ease: 'Power4.easeOut',
                                     onComplete: () => {
                                         this.discoColours()

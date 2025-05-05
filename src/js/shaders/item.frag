@@ -1,4 +1,8 @@
-varying vec2 vUv;
+#version 300 es
+precision highp float;
+
+in vec2 vUv;
+out vec4 fragColor;
 
 uniform float time;
 uniform vec3 fogColor;
@@ -10,12 +14,11 @@ uniform vec3 gradientColor;
 uniform float progress;
 
 void main() {
-
 	vec2 uv = vUv;
 	// vec4 color = texture2D( texture, vUv );
 
-	vec4 origColor = texture2D(texture, vUv);
-    float grayscaleValue = dot(origColor.rgb, vec3(0.299, 0.587, 0.114));
+	vec4 origColor = texture(texture, vUv);
+	float grayscaleValue = dot(origColor.rgb, vec3(0.299, 0.587, 0.114));
 
 	// remove green
 	// if ( origColor.r < 0.4 && origColor.b < 0.4 && origColor.g > 0.4 ) {
@@ -26,21 +29,16 @@ void main() {
 	// 	origColor.a = 0.;
 	// }
 
-	vec4 gradientImage = mix(vec4( gradientColor, 1.0), vec4(1.0, 1.0, 1.0, 1.0), grayscaleValue);
+	vec4 gradientImage = mix(vec4(gradientColor, 1.0), vec4(1.0), grayscaleValue);
 
 	// if ( gradientImage.b < 0.9 ) discard;
 
 	// gl_FragColor = origColor * opacity;
-	gl_FragColor = mix( vec4( gradientImage.rgb, 0. ), mix( gradientImage, origColor, progress ), opacity );
+	fragColor = mix(vec4(gradientImage.rgb, 0.0), mix(gradientImage, origColor, progress), opacity);
 
 	#ifdef USE_FOG
-		#ifdef USE_LOGDEPTHBUF_EXT
-			float depth = gl_FragDepthEXT / gl_FragCoord.w;
-		#else
-			float depth = gl_FragCoord.z / gl_FragCoord.w;
-		#endif
-		float fogFactor = smoothstep( fogNear, fogFar, depth );
-		gl_FragColor.rgb = mix( gl_FragColor.rgb, fogColor, fogFactor );
+		float depth = gl_FragCoord.z / gl_FragCoord.w;
+		float fogFactor = smoothstep(fogNear, fogFar, depth);
+		fragColor.rgb = mix(fragColor.rgb, fogColor, fogFactor);
 	#endif
-
 }

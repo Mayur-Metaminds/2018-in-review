@@ -1,5 +1,6 @@
 import * as THREE from 'three'
-import progressPromise from '../utils/progressPromise'
+import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
+import progressPromise from './progressPromise'
 
 export default class AssetLoader {
 
@@ -18,36 +19,34 @@ export default class AssetLoader {
 
     }
 
-    load( assetList, renderer ) {
+    async load( assetList, renderer ) {
 
         this.assetList = assetList
         this.renderer = renderer
 
-        let assetLoadPromises = []
+        const assetLoadPromises = []
 
         // Load images + videos
-        let imageLoader = new THREE.TextureLoader()
+        const imageLoader = new THREE.TextureLoader()
         imageLoader.crossOrigin = ''
 
-        let preload = true
+        const preload = true
 
-        for( let month in this.assetList ) {
+        for( const month in this.assetList ) {
 
-            // preload = month === 'intro' ? true : false
+            for( const filename of this.assetList[month] ) {
 
-            this.assetList[month].forEach( filename => {
+                if( filename.endsWith( '.mp4' ) ) {
 
-                if( ~filename.indexOf( '.mp4' ) ) {
-
-                    let video = document.createElement( 'video' );
-                    video.style = 'position:absolute;height:0'
+                    const video = document.createElement( 'video' )
+                    video.style.cssText = 'position:absolute;height:0'
                     video.muted = true
                     video.autoplay = false
                     video.loop = true
                     video.crossOrigin = 'anonymous'
-                    video.setAttribute('muted', true)
-                    video.setAttribute('webkit-playsinline', true)
-                    video.setAttribute('playsinline', true)
+                    video.setAttribute( 'muted', 'true' )
+                    video.setAttribute( 'webkit-playsinline', 'true' )
+                    video.setAttribute( 'playsinline', 'true' )
                     video.preload = 'metadata'
                     video.src = `assets/${month}/${filename}`
                     document.body.appendChild( video )
@@ -81,20 +80,20 @@ export default class AssetLoader {
 
                 }
 
-            })
+            }
 
         }
 
         // Load Fonts
-        let fontLoader = new THREE.FontLoader()
-        let fonts = [
+        const fontLoader = new FontLoader()
+        const fonts = [
             'fonts/schnyder.json',
             'fonts/schnyder-outline.json',
             'fonts/suisse.json',
         ]
 
-        for( let i = 0; i < fonts.length; i++ ) {
-            assetLoadPromises.push( new Promise( resolve => fontLoader.load( fonts[i], font => {
+        for( const fontPath of fonts ) {
+            assetLoadPromises.push( new Promise( resolve => fontLoader.load( fontPath, font => {
                 this.assets.fonts[ font.data.familyName ] = font
                 resolve() 
             } ) ) )
@@ -110,8 +109,8 @@ export default class AssetLoader {
 
     update( completed, total ) {
 
-        let progress = Math.round( completed / total * 100 )
-        this.progressEl.innerHTML = progress + '%'
+        const progress = Math.round( completed / total * 100 )
+        this.progressEl.innerHTML = `${progress}%`
         this.progressBar.style.strokeDashoffset = 252.363 - ( 252.363 * ( completed / total ) )
 
     }
@@ -157,7 +156,7 @@ export default class AssetLoader {
 
         } else {
 
-            let texture = new THREE.TextureLoader().load( `assets/${month}/${filename}`, texture => {
+            const texture = new THREE.TextureLoader().load( `assets/${month}/${filename}`, texture => {
 
                 texture.size = new THREE.Vector2( texture.image.width / 2, texture.image.height / 2 )
                 texture.needsUpdate = true
@@ -179,7 +178,7 @@ export default class AssetLoader {
 
     createVideoTexture( video, month, filename, resolve, reject ) {
 
-        let texture = new THREE.VideoTexture( video )
+        const texture = new THREE.VideoTexture( video )
         texture.minFilter = texture.magFilter = THREE.LinearFilter
         texture.name = `${month}/${filename}`
         texture.mediaType = 'video'
@@ -199,22 +198,19 @@ export default class AssetLoader {
                 video.onloadeddata = null
             }
 
+            if( !this.assets.textures[ month ] ) this.assets.textures[ month ] = {}
+            this.assets.textures[ month ][ filename ] = texture
+
             resolve( texture )
 
         } else {
 
-            texture.size = new THREE.Vector2( 1, 1 )
+            texture.size = new THREE.Vector2( 10, 10 )
 
-            video.oncanplaythrough = () => {
-                texture.size = new THREE.Vector2( texture.image.videoWidth / 2, texture.image.videoHeight / 2 )
-                texture.needsUpdate = true
-                video.oncanplaythrough = null
-            }
+            if( !this.assets.textures[ month ] ) this.assets.textures[ month ] = {}
+            this.assets.textures[ month ][ filename ] = texture
 
         }
-
-        if( !this.assets.textures[ month ] ) this.assets.textures[ month ] = {}
-        this.assets.textures[ month ][ filename ] = texture
 
     }
 
